@@ -6,10 +6,14 @@ import (
 	"github.com/pandakn/cafe-beans/modules/middleware/middlewareRepositories"
 	"github.com/pandakn/cafe-beans/modules/middleware/middlewareUseCases"
 	"github.com/pandakn/cafe-beans/modules/monitor/monitorHandlers"
+	"github.com/pandakn/cafe-beans/modules/users/usersHandlers"
+	"github.com/pandakn/cafe-beans/modules/users/usersRepositories"
+	"github.com/pandakn/cafe-beans/modules/users/usersUseCases"
 )
 
 type IModuleFactory interface {
 	MonitorModule()
+	UsersModule()
 }
 
 type moduleFactory struct {
@@ -36,4 +40,14 @@ func (m *moduleFactory) MonitorModule() {
 	handler := monitorHandlers.MonitorHandler(m.s.cfg)
 
 	m.r.Get("/", handler.HealthCheck)
+}
+
+func (m *moduleFactory) UsersModule() {
+	repository := usersRepositories.UserRepository(m.s.db)
+	useCase := usersUseCases.UserUseCase(m.s.cfg, repository)
+	handler := usersHandlers.UserHandler(m.s.cfg, useCase)
+
+	router := m.r.Group("/users")
+
+	router.Post("/signup", handler.SignUpCustomer)
 }
