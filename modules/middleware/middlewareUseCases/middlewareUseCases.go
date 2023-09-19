@@ -5,6 +5,7 @@ import (
 )
 
 type IMiddlewareUseCase interface {
+	FindAccessToken(userId, accessToken string) bool
 }
 
 type middlewareUseCase struct {
@@ -15,4 +16,8 @@ func MiddlewareUseCase(middlewareRepo middlewareRepositories.IMiddlewareReposito
 	return &middlewareUseCase{
 		middlewareRepo: middlewareRepo,
 	}
+}
+
+func (u *middlewareUseCase) FindAccessToken(userId, accessToken string) bool {
+	return u.middlewareRepo.FindAccessToken(userId, accessToken)
 }
