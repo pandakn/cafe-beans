@@ -56,7 +56,10 @@ func (m *moduleFactory) UsersModule() {
 
 	// admin
 	router.Post("/signup-admin", handler.SignUpAdmin)
-	router.Get("/secret", m.mid.JwtAuth(), handler.GenerateAdminToken)
+
+	// role_id = 2 is admin
+	// only admin can access this endpoint
+	router.Get("/admin/secret", m.mid.JwtAuth(), m.mid.Authorize(2), handler.GenerateAdminToken)
 
 	// user
 	router.Get("/:user_id", m.mid.JwtAuth(), m.mid.ParamsCheck(), handler.GetUserProfile)
