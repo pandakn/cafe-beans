@@ -2,6 +2,9 @@ package servers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/pandakn/cafe-beans/modules/appInfo/appInfoHandlers"
+	"github.com/pandakn/cafe-beans/modules/appInfo/appInfoRepositories"
+	"github.com/pandakn/cafe-beans/modules/appInfo/appInfoUseCases"
 	"github.com/pandakn/cafe-beans/modules/middleware/middlewareHandlers"
 	"github.com/pandakn/cafe-beans/modules/middleware/middlewareRepositories"
 	"github.com/pandakn/cafe-beans/modules/middleware/middlewareUseCases"
@@ -14,6 +17,7 @@ import (
 type IModuleFactory interface {
 	MonitorModule()
 	UsersModule()
+	AppInfoModule()
 }
 
 type moduleFactory struct {
@@ -49,13 +53,13 @@ func (m *moduleFactory) UsersModule() {
 
 	router := m.r.Group("/users")
 
-	router.Post("/signup", handler.SignUpCustomer)
-	router.Post("/signin", handler.SingIn)
-	router.Post("/signout", handler.SignOut)
-	router.Post("/refresh", handler.RefreshPassport)
+	router.Post("/signup", m.mid.ApiKeyAuth(), handler.SignUpCustomer)
+	router.Post("/signin", m.mid.ApiKeyAuth(), handler.SingIn)
+	router.Post("/signout", m.mid.ApiKeyAuth(), handler.SignOut)
+	router.Post("/refresh", m.mid.ApiKeyAuth(), handler.RefreshPassport)
 
 	// admin
-	router.Post("/signup-admin", handler.SignUpAdmin)
+	router.Post("/signup-admin", m.mid.JwtAuth(), m.mid.Authorize(2), handler.SignUpAdmin)
 
 	// role_id = 2 is admin
 	// only admin can access this endpoint
@@ -63,4 +67,19 @@ func (m *moduleFactory) UsersModule() {
 
 	// user
 	router.Get("/:user_id", m.mid.JwtAuth(), m.mid.ParamsCheck(), handler.GetUserProfile)
+}
+
+func (m *moduleFactory) AppInfoModule() {
+	repository := appInfoRepositories.AppInfoRepository(m.s.db)
+	useCase := appInfoUseCases.AppInfoUseCase(repository)
+	handler := appInfoHandlers.AppInfoHandler(m.s.cfg, useCase)
+
+	router := m.r.Group("/app-info")
+
+	router.Get("/api-key", m.mid.JwtAuth(), m.mid.Authorize(2), handler.GenerateApiKey)
+
+	// categories
+	router.Get("/categories", m.mid.ApiKeyAuth(), handler.FindCategory)
+	router.Post("/categories", m.mid.JwtAuth(), m.mid.Authorize(2), handler.AddCategory)
+	router.Delete("/:category_id/categories", m.mid.JwtAuth(), m.mid.Authorize(2), handler.RemoveCategory)
 }
