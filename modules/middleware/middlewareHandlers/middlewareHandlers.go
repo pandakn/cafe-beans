@@ -20,6 +20,7 @@ const (
 	jwtAuthErr     middlewareHandlersErrCode = "middleware-002"
 	paramsCheckErr middlewareHandlersErrCode = "middleware-003"
 	authorizeErr   middlewareHandlersErrCode = "middleware-004"
+	apiKeyErr      middlewareHandlersErrCode = "middleware-005"
 )
 
 type IMiddlewareHandler interface {
@@ -29,6 +30,7 @@ type IMiddlewareHandler interface {
 	JwtAuth() fiber.Handler
 	ParamsCheck() fiber.Handler
 	Authorize(expectRoleId ...int) fiber.Handler
+	ApiKeyAuth() fiber.Handler
 }
 
 type middlewareHandler struct {
@@ -160,5 +162,19 @@ func (h *middlewareHandler) Authorize(expectRoleId ...int) fiber.Handler {
 			string(authorizeErr),
 			"no permission to access",
 		).Res()
+	}
+}
+
+func (h *middlewareHandler) ApiKeyAuth() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		key := c.Get("X-Api-Key")
+		if _, err := cafeBeansAuth.ParseApiKey(h.cfg.Jwt(), key); err != nil {
+			return entities.NewResponse(c).Error(
+				fiber.ErrUnauthorized.Code,
+				string(apiKeyErr),
+				"api key is invalid or required",
+			).Res()
+		}
+		return c.Next()
 	}
 }
